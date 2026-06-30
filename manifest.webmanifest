@@ -1,0 +1,16 @@
+{
+  "name": "Tank Chart",
+  "short_name": "Tank Chart",
+  "description": "Stick-to-gallon calibration chart for horizontal cylindrical tanks.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e9edf3",
+  "theme_color": "#e9edf3",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

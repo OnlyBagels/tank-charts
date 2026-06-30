@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tank Chart</title>
+  <meta name="description" content="Stick-to-gallon calibration chart for horizontal cylindrical tanks." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#e9edf3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- iOS standalone -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tank Chart" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      /* surface */
+      --bg:         #e9edf3;
+      --bg-tint:    #dde4ee;
+      --card:       #ffffff;
+      --card-sub:   #f6f8fb;
+
+      /* ink */
+      --ink:        #0f1828;
+      --muted:      #5a6577;
+      --faint:      #8b94a4;
+
+      /* lines */
+      --line:       #e4e8ef;
+      --line-strong:#cdd5e0;
+
+      /* accent — liquid blue */
+      --accent:      #0a6dd8;
+      --accent-ink:  #0a4c97;
+      --accent-soft: #e7f0fd;
+      --liquid-top:  #5bb8ff;
+      --liquid-bot:  #1370cf;
+
+      /* semantic — fill limit / caution */
+      --warn:       #c87a00;
+      --warn-soft:  #fbf0d8;
+      --danger:     #c0362c;
+
+      /* radius scale — cards / controls / pills (held everywhere) */
+      --r-card: 22px;
+      --r-ctrl: 14px;
+      --r-pill: 999px;
+
+      /* tinted elevation */
+      --shadow-sm: 0 1px 2px rgba(15,24,40,.05);
+      --shadow-md: 0 1px 2px rgba(15,24,40,.04), 0 10px 28px -16px rgba(15,24,40,.22);
+
+      --ui: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 18% -10%, var(--bg-tint), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--ui);
+      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      touch-action: manipulation;
+    }
+
+    body {
+      padding:
+        env(safe-area-inset-top) env(safe-area-inset-right)
+        env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    button, input, select { font: inherit; color: inherit; }
+
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+
+    /* ---------- content ---------- */
+    .content {
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px 26px;
+    }
+
+    .col { min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
+    .col-left { display: grid; gap: 14px; align-content: start; }
+
+    /* ---------- card primitive ---------- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--r-card);
+      box-shadow: var(--shadow-md);
+    }
+    .eyebrow {
+      font-size: 11px; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--faint);
+    }
+
+    /* ---------- inputs ---------- */
+    .inputs { padding: 18px 18px 20px; display: grid; gap: 15px; }
+    .inputs > .eyebrow { margin-bottom: -3px; }
+
+    .field { display: grid; gap: 7px; }
+    label { font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em; }
+
+    .control {
+      position: relative;
+      display: flex; align-items: center;
+    }
+    input, select {
+      width: 100%;
+      height: 54px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--r-ctrl);
+      background: var(--card-sub);
+      padding: 0 15px;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 21px; font-weight: 600; line-height: 1;
+      outline: none;
+      transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    select {
+      appearance: none; -webkit-appearance: none;
+      font-family: var(--ui); font-weight: 600;
+      padding-right: 42px; cursor: pointer;
+    }
+    .control .chev {
+      position: absolute; right: 15px; pointer-events: none;
+      color: var(--muted);
+    }
+    .unit {
+      position: absolute; right: 15px; pointer-events: none;
+      font-size: 13px; font-weight: 600; color: var(--faint);
+      letter-spacing: .02em;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      background: var(--card);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .error {
+      display: none;
+      align-items: center; gap: 9px;
+      background: #fdeeec;
+      border: 1px solid #f3c9c4;
+      color: var(--danger);
+      border-radius: var(--r-ctrl);
+      padding: 11px 13px;
+      font-size: 14px; font-weight: 600;
+    }
+    .error::before { content: "!"; display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background: var(--danger); color:#fff; font-size:13px; font-weight:700; flex:none; }
+
+    /* ---------- fill-limit marks ---------- */
+    .marks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mark {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--r-card);
+      padding: 15px 16px 16px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .mark::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--warn);
+    }
+    .mark .cap { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--warn); }
+    .mark .depth {
+      margin-top: 8px;
+      font-family: var(--mono);
+      font-size: 34px; font-weight: 600; line-height: 0.95;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .mark .depth small { font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 2px; }
+    .mark .gal { margin-top: 7px; font-size: 13.5px; font-weight: 500; color: var(--muted); }
+
+    /* ---------- chart ---------- */
+    .chart-card {
+      height: 100%; min-height: 0;
+      display: grid; grid-template-rows: 1fr;
+      overflow: hidden;
+    }
+    .table-wrap { min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; min-width: 420px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+
+    th, td { padding: 12px 20px; text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+
+    th {
+      position: sticky; top: 0; z-index: 3;
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      color: var(--faint); font-size: 11px; font-weight: 600;
+      letter-spacing: .07em; text-transform: uppercase;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    td {
+      font-family: var(--mono);
+      font-size: 16px; font-weight: 500;
+      border-bottom: 1px solid var(--line);
+      color: var(--ink);
+    }
+    td:first-child { font-weight: 600; }
+    td.pct { color: var(--muted); }
+    tbody tr:nth-child(even) td { background: rgba(246,248,251,.6); }
+
+    tr.mark-row td { background: var(--warn-soft); color: #7a4b00; font-weight: 600; }
+    tr.mark-row td:first-child { box-shadow: inset 4px 0 0 var(--warn); }
+
+    .badge {
+      display: inline-block; margin-left: 8px;
+      padding: 2px 8px; border-radius: var(--r-pill);
+      font-family: var(--ui);
+      background: var(--warn); color: #fff;
+      font-size: 11px; font-weight: 600; letter-spacing: .02em;
+      vertical-align: 2px;
+    }
+
+    /* ---------- responsive: iPad portrait + phones ---------- */
+    @media (orientation: portrait) and (min-width: 760px) {
+      .content { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .col-left .marks { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      /* one natural page scroll: inputs → marks → full chart flowing down */
+      .content {
+        display: block;
+        padding: 12px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+      }
+      .col { overflow: visible; }
+      .col-left { margin-bottom: 12px; }
+      .marks { gap: 10px; }
+
+      .chart-card { height: auto; display: block; overflow: visible; }
+      .table-wrap { overflow: visible; }
+
+      /* shrink the table to fit the phone — no horizontal cut-off */
+      table { min-width: 0; width: 100%; table-layout: fixed; }
+      th, td { padding: 12px 10px; font-size: 15px; }
+      th { font-size: 10px; top: -1px; }
+      td:first-child, th:first-child { width: 46%; }
+      .badge { display: block; margin: 4px 0 0; width: max-content; }
+    }
+
+    /* ---------- print ---------- */
+    @media print {
+      html, body { height: auto; overflow: visible; background: #fff; padding: 0; }
+      .app { height: auto; display: block; }
+      .inputs { display: none !important; }
+      .content { display: block; padding: 0; overflow: visible; }
+      .col { overflow: visible; display: block; }
+      .card, .mark, .chart-card { box-shadow: none; border: 1px solid #bbb; break-inside: avoid; }
+      .marks { margin-bottom: 10px; }
+      th { position: static; background: #eef1f5; color: #333; }
+      td { font-size: 11px; padding: 4px 8px; }
+      th { font-size: 10px; padding: 5px 8px; }
+      tr.mark-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="content">
+      <!-- inputs + fill limits -->
+      <aside class="col col-left">
+        <section class="card inputs">
+          <div class="eyebrow">Tank parameters</div>
+
+          <div class="field">
+            <label for="diameter">Tank diameter</label>
+            <div class="control">
+              <input id="diameter" type="number" value="92" step="0.001" inputmode="decimal" />
+              <span class="unit">in</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="gallons">Full gallons</label>
+            <div class="control">
+              <input id="gallons" type="number" value="11511" step="0.001" inputmode="decimal" />
+              <span class="unit">gal</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="spacing">Chart spacing</label>
+            <div class="control">
+              <select id="spacing">
+                <option value="1">1 inch</option>
+                <option value="0.5">1/2 inch</option>
+                <option value="0.25">1/4 inch</option>
+                <option value="0.125" selected>1/8 inch</option>
+                <option value="0.0625">1/16 inch</option>
+              </select>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="offset">Stick offset</label>
+            <div class="control">
+              <input id="offset" type="number" value="0" step="0.001" inputmode="decimal" />
+              <span class="unit">in</span>
+            </div>
+          </div>
+
+          <div class="error" id="error"></div>
+        </section>
+
+        <section class="marks">
+          <div class="mark">
+            <div class="cap">90% fill limit</div>
+            <div class="depth" id="d90">—</div>
+            <div class="gal" id="g90">—</div>
+          </div>
+          <div class="mark">
+            <div class="cap">95% fill limit</div>
+            <div class="depth" id="d95">—</div>
+            <div class="gal" id="g95">—</div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- chart -->
+      <section class="col chart-card-col">
+        <div class="chart-card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Stick</th>
+                  <th>Gallons</th>
+                  <th>Full</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const els = {
+      diameter: $("diameter"), gallons: $("gallons"), spacing: $("spacing"), offset: $("offset"),
+      error: $("error"),
+      d90: $("d90"), g90: $("g90"), d95: $("d95"), g95: $("g95"),
+      rows: $("rows")
+    };
+
+    let chartRows = [];
+
+    /* ---------- formatting ---------- */
+    const num = (n, d = 0) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    const clean = n => num(n, 3).replace(/\.?0+$/, "");
+    const stick = n => `${clean(n)}`;
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+    /* ---------- tank math ---------- */
+    function percentFull(diameter, depth, offset) {
+      const r = diameter / 2;
+      const h = clamp(depth + offset, 0, diameter);
+      if (h <= 0) return 0;
+      if (h >= diameter) return 1;
+      const area = r * r * Math.acos((r - h) / r) - (r - h) * Math.sqrt(2 * r * h - h * h);
+      return area / (Math.PI * r * r);
+    }
+    function depthAtPercent(diameter, offset, target) {
+      let lo = 0, hi = diameter;
+      for (let i = 0; i < 70; i++) {
+        const mid = (lo + hi) / 2;
+        if (percentFull(diameter, mid, offset) < target) lo = mid; else hi = mid;
+      }
+      return (lo + hi) / 2;
+    }
+    const gallonsAt = (diameter, gallons, depth, offset) => gallons * percentFull(diameter, depth, offset);
+
+    function inputs() {
+      const diameter = Number(els.diameter.value);
+      const gallons = Number(els.gallons.value);
+      const spacing = Number(els.spacing.value);
+      const offset = Number(els.offset.value || 0);
+      if (!diameter || diameter <= 0) throw new Error("Enter a tank diameter greater than zero.");
+      if (!gallons || gallons <= 0) throw new Error("Enter the full-tank gallons.");
+      if (!spacing || spacing <= 0) throw new Error("Choose a chart spacing.");
+      return { diameter, gallons, spacing, offset };
+    }
+
+    /* ---------- full rebuild ---------- */
+    function build() {
+      const { diameter, gallons, spacing, offset } = inputs();
+
+      const d90 = depthAtPercent(diameter, offset, 0.90);
+      const d95 = depthAtPercent(diameter, offset, 0.95);
+
+      els.d90.innerHTML = `${stick(d90)} <small>in</small>`;
+      els.g90.textContent = `${num(Math.round(gallons * 0.90))} gallons`;
+      els.d95.innerHTML = `${stick(d95)} <small>in</small>`;
+      els.g95.textContent = `${num(Math.round(gallons * 0.95))} gallons`;
+
+      // chart rows
+      chartRows = [];
+      const steps = Math.ceil(diameter / spacing);
+      for (let i = 0; i <= steps; i++) {
+        const depth = Math.min(Number((i * spacing).toFixed(6)), diameter);
+        const gal = gallonsAt(diameter, gallons, depth, offset);
+        chartRows.push({ depth, gallons: Math.round(gal), full: (gal / gallons) * 100, mark: "" });
+      }
+      [90, 95].forEach(level => {
+        const target = level === 90 ? d90 : d95;
+        let best = 0, diff = Infinity;
+        chartRows.forEach((row, i) => { const d = Math.abs(row.depth - target); if (d < diff) { best = i; diff = d; } });
+        chartRows[best].mark = chartRows[best].mark ? `${chartRows[best].mark} · ${level}%` : `${level}%`;
+      });
+
+      els.rows.innerHTML = chartRows.map(row => {
+        const badge = row.mark ? `<span class="badge">${row.mark}</span>` : "";
+        return `<tr class="${row.mark ? "mark-row" : ""}">
+          <td>${stick(row.depth)} in${badge}</td>
+          <td>${num(row.gallons)}</td>
+          <td class="pct">${num(row.full, 1)}%</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function update() {
+      try {
+        els.error.style.display = "none";
+        build();
+      } catch (e) {
+        els.error.textContent = e.message;
+        els.error.style.display = "flex";
+      }
+    }
+
+    /* ---------- wiring ---------- */
+    [els.diameter, els.gallons, els.spacing, els.offset].forEach(el => el.addEventListener("input", update));
+
+    let rt;
+    window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(update, 120); });
+    window.addEventListener("orientationchange", () => setTimeout(update, 250));
+
+    update();
+
+    /* ---------- PWA service worker ---------- */
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
