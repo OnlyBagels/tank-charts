@@ -4,7 +4,7 @@ A stick-to-gallon calibration chart for horizontal cylindrical tanks. Works
 offline once installed and runs full-screen on iPad/iPhone.
 
 ## Files
-- `index.html` — the app (self-contained: HTML, CSS, JS)
+- `index.html` — the stick-to-gallon chart + OPV percent-full (self-contained: HTML, CSS, JS)
 - `manifest.webmanifest` — PWA metadata (name, icons, standalone display)
 - `sw.js` — service worker (offline cache of the app shell)
 - `icons/` — app icons (192, 512, 512-maskable, and a 180px Apple touch icon)

@@ -105,7 +105,7 @@
       display: grid;
       grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
       gap: 16px;
-      padding: 16px 26px;
+      padding: 14px 26px 16px;
     }
 
     .col { min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
@@ -178,6 +178,17 @@
       font-size: 14px; font-weight: 600;
     }
     .error::before { content: "!"; display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background: var(--danger); color:#fff; font-size:13px; font-weight:700; flex:none; }
+
+    .opv-result {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      margin-top: 2px;
+      padding: 11px 14px;
+      border-radius: var(--r-ctrl);
+      background: var(--accent-soft);
+      border: 1px solid #cfe2fb;
+    }
+    .opv-result-label { font-size: 13px; font-weight: 600; letter-spacing: .01em; color: var(--accent-ink); }
+    .opv-result-value { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--accent-ink); }
 
     /* ---------- fill-limit marks ---------- */
     .marks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -257,7 +268,7 @@
       /* one natural page scroll: inputs → marks → full chart flowing down */
       .content {
         display: block;
-        padding: 12px;
+        padding: 10px 12px 12px;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
@@ -341,6 +352,18 @@
             </div>
           </div>
 
+          <div class="field">
+            <label for="opv">OPV</label>
+            <div class="control">
+              <input id="opv" type="number" min="0" step="0.001" inputmode="decimal" placeholder="—" />
+              <span class="unit">in</span>
+            </div>
+            <div class="opv-result">
+              <span class="opv-result-label">Percent full</span>
+              <span class="opv-result-value num" id="opvPct">—</span>
+            </div>
+          </div>
+
           <div class="error" id="error"></div>
         </section>
 
@@ -382,6 +405,7 @@
     const $ = id => document.getElementById(id);
     const els = {
       diameter: $("diameter"), gallons: $("gallons"), spacing: $("spacing"), offset: $("offset"),
+      opv: $("opv"), opvPct: $("opvPct"),
       error: $("error"),
       d90: $("d90"), g90: $("g90"), d95: $("d95"), g95: $("g95"),
       rows: $("rows")
@@ -437,6 +461,18 @@
       els.d95.innerHTML = `${stick(d95)} <small>in</small>`;
       els.g95.textContent = `${num(Math.round(gallons * 0.95))} gallons`;
 
+      // OPV — percent full from the empty space at the top of the tank
+      els.opv.max = diameter;
+      const opvRaw = els.opv.value.trim();
+      const opvVal = Number(opvRaw);
+      if (opvRaw === "" || !Number.isFinite(opvVal) || opvVal < 0 || opvVal > diameter) {
+        els.opvPct.textContent = "—";
+      } else {
+        const opvGallons = Math.round(gallonsAt(diameter, gallons, opvVal, offset));
+        const opvPercentFull = 100 - ((opvGallons / gallons) * 100);
+        els.opvPct.textContent = `${opvPercentFull.toFixed(2)}%`;
+      }
+
       // chart rows
       chartRows = [];
       const steps = Math.ceil(diameter / spacing);
@@ -473,7 +509,7 @@
     }
 
     /* ---------- wiring ---------- */
-    [els.diameter, els.gallons, els.spacing, els.offset].forEach(el => el.addEventListener("input", update));
+    [els.diameter, els.gallons, els.spacing, els.offset, els.opv].forEach(el => el.addEventListener("input", update));
 
     let rt;
     window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(update, 120); });
